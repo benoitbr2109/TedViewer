@@ -3,6 +3,7 @@
   "displayName": "TedViewer",
   "description": "Webview for dataset file which are created by Ted application.",
   "version": "1.0.0",
+  "publisher": "Benoit Braeckeveldt",
   "engines": {
     "vscode": "^1.87.0"
   },
