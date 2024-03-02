@@ -1,14 +1,18 @@
 {
   "name": "tedviewer",
   "displayName": "TedViewer",
-  "description": "",
+  "description": "Webview for dataset file which are created by Ted application.",
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.87.0"
   },
+  "author": {
+    "name": "Benoit Braeckeveldt"
+  },
   "categories": [
     "Other"
   ],
+  "icon": "media/ted.png",
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
