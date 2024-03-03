@@ -6,7 +6,8 @@ This extension add webview for dataset file which are created by Ted application
 
 ### Access
 
-Add view view icon in menu bar when current file has .dataset extension.
+Add view view icon in menu bar when current file has ".dataset" extension.
+![Preview icon](media/preview.png)
 
 To force webview rendering from command palet, you can run "renderDataset" command.
 
@@ -21,6 +22,4 @@ To force webview rendering from command palet, you can run "renderDataset" comma
 
 ## Release Notes
 
-### 1.0.0
-
-Initial release.
+[Change log](CHANGELOG.md)
