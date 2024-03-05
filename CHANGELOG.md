@@ -13,3 +13,9 @@ All notable changes to the "tedviewer" extension will be documented in this file
 ### Changed
 
 - Use mdbootstrap
+
+## 1.1.0 - 2024-03-53
+
+### Changed
+
+- Convert to custom editor
