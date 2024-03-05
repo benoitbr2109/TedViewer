@@ -189,6 +189,7 @@ function technicalMappingsToHtml(technicalMappings: any = {}) {
         <th scope="col">Table</th>
         <th scope="col">Column</th>
         <th scope="col">Generator</th>
+        <th scope="col">Value</th>
       </tr>
     </thead>
     <tbody>
@@ -201,8 +202,14 @@ function technicalMappingsToHtml(technicalMappings: any = {}) {
           <td>${technicalMapping.db}</td>
           <td>${technicalMapping.table}</td>
           <td>${technicalMapping.column}</td>
-          <td>${technicalMapping.generator}</td>
-        </tr>`;
+          <td>${technicalMapping.generator}</td>`;
+          if (technicalMapping.generatorProperty !== null && technicalMapping.generatorProperty!== undefined) {
+              htmlBody += `<td>${technicalMapping.generatorProperty}</td>`;
+          }
+          else {
+              htmlBody += `<td></td>`;
+          }
+          htmlBody += `</tr>`;
     }
     htmlBody += '</tbody></table>';
     return htmlBody;

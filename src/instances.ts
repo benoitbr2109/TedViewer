@@ -1,17 +1,17 @@
 
-export function instancesToHtml(instances: any = {}) {
+export function instancesToHtml(instances: any = {}, showAll: boolean = false): string {
     let htmlBody = "";
     for (let i = 0; i < instances.length; i++) {
         let item = instances[i];
         for (let j = 0; j < item.instances.length; j++) {
             let instance = item.instances[j];
-            htmlBody += instanceToHtml(instance);
+            htmlBody += instanceToHtml(instance, showAll);
         }
     }
     return htmlBody;
 }
 
-function instanceToHtml(instance: any = {}, headerLevel: number = 1) {
+function instanceToHtml(instance: any = {}, showAll: boolean = false): string {
     let htmlBody = `
     <div id="accordion${instance.id}" class="accordion accordion-borderless">
       <div class="card">
@@ -25,8 +25,8 @@ function instanceToHtml(instance: any = {}, headerLevel: number = 1) {
   
           <div id="collapse${instance.id}" class="collapse" aria-labelledby="heading${instance.id}" data-parent="#accordion${instance.id}">
             <div class="card-body">
-            ${propertiesToHtml(instance.properties)}
-            ${instancesToHtml(instance.children)}
+            ${propertiesToHtml(instance.properties, showAll)}
+            ${instancesToHtml(instance.children, showAll)}
             </div>
           </div>
         </div>
@@ -35,7 +35,7 @@ function instanceToHtml(instance: any = {}, headerLevel: number = 1) {
     return htmlBody;
 }
 
-function propertiesToHtml(properties: any = {}) {
+function propertiesToHtml(properties: any = {}, showAll: boolean = false): string {
 
     let htmlBody = `
     <table class="table table-sm">
@@ -44,7 +44,7 @@ function propertiesToHtml(properties: any = {}) {
 
     for (let i = 0; i < properties.length; i++) {
         let property = properties[i];
-        if (property.value !== null) {
+        if (property.value !== null || showAll === true) {
             htmlBody += `
         <tr>
           <td>${property.name}</td>
