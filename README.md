@@ -8,7 +8,13 @@ Rendering of .dataset file
 
 ### Display
 
+#### Instances
+
 * Display instances in dataset (skipping empty properties)
+* Enable properties edition
+
+#### Defintions
+
 * Display concepts definitions
   * Business mappings
   * Technical mappings
@@ -18,3 +24,7 @@ Rendering of .dataset file
 ## Release Notes
 
 [Change log](CHANGELOG.md)
+
+## Todo
+
+* [ ] Add/Remove instances

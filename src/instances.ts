@@ -1,4 +1,3 @@
-
 export function instancesToHtml(instances: any = {}, showAll: boolean = false): string {
     let htmlBody = "";
     for (let i = 0; i < instances.length; i++) {
@@ -17,16 +16,18 @@ function instanceToHtml(instance: any = {}, showAll: boolean = false): string {
       <div class="card">
         <div id="heading${instance.id}">
           <h5 class="mb-0 d-flex justify-content-between align-items-center">
-            <button class="accordion-button collapsed" data-toggle="collapse" data-target="#collapse${instance.id}" aria-expanded="false" aria-controls="collapse${instance.id}">
-            ${instance.id}
-            </button>
+            <a class="accordion-button" data-toggle="collapse" data-target="#collapse${instance.id}" aria-expanded="true" aria-controls="collapse${instance.id}">
+                ${instance.id}
+            </a>
             </h5>
           </div>
   
-          <div id="collapse${instance.id}" class="collapse" aria-labelledby="heading${instance.id}" data-parent="#accordion${instance.id}">
+          <div id="collapse${instance.id}" class="accordion-collapse collapse show" aria-labelledby="heading${instance.id}" data-parent="#accordion${instance.id}">
             <div class="card-body">
-            ${propertiesToHtml(instance.properties, showAll)}
-            ${instancesToHtml(instance.children, showAll)}
+                <div id="${instance.id}" class="_instance_">
+                ${propertiesToHtml(instance.id, instance.properties, showAll)}
+                ${instancesToHtml(instance.children, showAll)}
+                </div>
             </div>
           </div>
         </div>
@@ -35,7 +36,7 @@ function instanceToHtml(instance: any = {}, showAll: boolean = false): string {
     return htmlBody;
 }
 
-function propertiesToHtml(properties: any = {}, showAll: boolean = false): string {
+function propertiesToHtml(instanceName: String, properties: any = {}, showAll: boolean = false): string {
 
     let htmlBody = `
     <table class="table table-sm">
@@ -44,11 +45,12 @@ function propertiesToHtml(properties: any = {}, showAll: boolean = false): strin
 
     for (let i = 0; i < properties.length; i++) {
         let property = properties[i];
+        let value = property.value !== null ? property.value : '';
         if (property.value !== null || showAll === true) {
             htmlBody += `
         <tr>
           <td>${property.name}</td>
-          <td>${property.value}</td>
+          <td data-instance="${instanceName}" contenteditable="true" class="_property_value_" name="${property.name}">${value}</td>
         </tr>`;
         }
     }
