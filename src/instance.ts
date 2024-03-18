@@ -1,0 +1,21 @@
+export interface InstanceProperty {
+    name: string;
+    value: string;
+}
+
+export interface InstanceReference {
+    referenceName: string;
+    instanceId: string;
+}
+
+export interface InstanceChild {
+    concept: string;
+    instances: Array<Instance>;
+}
+
+export interface Instance {
+    id: string;
+    properties: Array<InstanceProperty>;
+    references: Array<InstanceReference>;
+    children: Array<InstanceChild>;
+}

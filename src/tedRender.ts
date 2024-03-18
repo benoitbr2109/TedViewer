@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { instancesToHtml } from './instances';
-import { definitionsToHtml } from './definitions';
+import { TedItem, TedTestCase, TedTestCaseInterface } from './tedTestCase';
 
 export class TedRenderProvider implements vscode.CustomTextEditorProvider {
 
@@ -11,10 +10,12 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
   }
 
   private static readonly viewType = 'tedviewer.render';
+  tedTestCase!: TedTestCase;
 
   constructor(
     private readonly context: vscode.ExtensionContext
-  ) { }
+  ) { 
+  }
 
   public async resolveCustomTextEditor(
     document: vscode.TextDocument,
@@ -26,25 +27,26 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
       enableScripts: true,
     };
     const fileName = document.fileName.replace(/^.*[\\/]/, '');
-    let jsonData = this.getDocumentAsJson(document);
-    webviewPanel.webview.html = this.getWebviewContent(jsonData, fileName);
+    this.tedTestCase = TedTestCase.fromJson(document.getText());
+    webviewPanel.webview.html = this.getWebviewContent(this.tedTestCase.interface, fileName);
 
     webviewPanel.webview.onDidReceiveMessage(e => {
       switch (e.command) {
         case 'showAll':
-          webviewPanel.webview.html = this.getWebviewContent(jsonData, fileName, e.content);
-          return;
+          webviewPanel.webview.html = this.getWebviewContent(this.tedTestCase.interface, fileName, e.content);
         case 'edit':
-          jsonData = this.getDocumentAsJson(document);
-          let updatedData = JSON.parse(e.content);
-          let results = this.updateJsonDocument(jsonData, updatedData);
+          var updatedData = JSON.parse(e.content);
+          var results = this.updateJsonDocument(this.tedTestCase.interface, updatedData);
           this.updateTextDocument(document, results[0]);
+        case 'addItem':
+          let addedItem = JSON.parse(e.content);
+          var results = this.tedTestCase.addConceptToInstance(addedItem.addedconcept, addedItem.instanceId);
       }
     });
 
   }
 
-  private updateJsonDocument(jsonData: any, updatedData: any): any {
+  private updateJsonDocument(jsonData: any, updatedData: any): Array<TedItem> {
     let isUpdated = false;
     for (let k = 0; k < jsonData.items.length; k++) {
       let item = jsonData.items[k];
@@ -88,19 +90,6 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
 			JSON.stringify(json, null, 2));
 
 		return vscode.workspace.applyEdit(edit);
-	}
-
-  private getDocumentAsJson(document: vscode.TextDocument): any {
-		const text = document.getText();
-		if (text.trim().length === 0) {
-			return {};
-		}
-
-		try {
-			return JSON.parse(text);
-		} catch {
-			throw new Error('Could not get document as json. Content is not valid json');
-		}
 	}
 
 
@@ -165,7 +154,7 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
                       </div>
                     </div>
 
-                    ${instancesToHtml(jsonData.items, showAll)}
+                    ${this.tedTestCase.instancesToHtml(showAll)}
                   </div>
                 </div>
       
@@ -174,7 +163,7 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
                     <section class="jumbotron text-center bg-light">
                       <h1 class="jumbotron-heading">Definitions</h1>
                     </section>
-                      ${definitionsToHtml(jsonData.definitions.concepts.items)}
+                      ${this.tedTestCase.definitionsToHtml()}
                   </div>
                 </div>
       
@@ -188,6 +177,14 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
               const input = document.getElementById("showAll");
               let text_ = input.checked;
               vscode.postMessage({command: 'showAll',content: text_});
+            }
+
+            function addItem(instanceId, addedconcept){
+                const dataMap = {
+                    'instanceId': instanceId,  
+                    'addedconcept': addedconcept
+                };
+                vscode.postMessage({command: 'addItem',content: JSON.stringify(dataMap)});
             }
 
             var properties = document.getElementsByClassName("_property_value_");
