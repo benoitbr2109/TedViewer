@@ -1,4 +1,4 @@
-import { Instance, InstanceProperty } from './instance';
+import { Instance, InstanceChild, InstanceProperty, InstanceReference } from './instance';
 import { Concept, ConceptBusinessMapping, ConceptProperty, ConceptReference, ConceptTechnicalMapping } from './concept';
 
 export interface TedItem {
@@ -59,7 +59,24 @@ export class TedTestCase{
             for (let j = 0; j < item.instances.length; j++) {
                 let instance = item.instances[j];
                 if (instance.id === instanceId) {
-                    instance.children.push(this._generateInstance(concept));
+                    let newInstance = this._generateInstance(concept);
+                    let existingChildConcept = [];//instance.children.filter((child: InstanceChild) => child.concept === concept);
+                    for (let k = 0; k < instance.children.length; k++) {
+                        let child = instance.children[k];
+                        if (child.concept === concept) {
+                          existingChildConcept.push(child);
+                        }
+                    }
+                    if (existingChildConcept.length === 0) {
+                        let instanceChild: InstanceChild = {
+                            concept: concept,
+                            instances: [newInstance]
+                        };
+                        instance.children.push(instanceChild);
+                    }
+                    else{
+                      existingChildConcept[0].instances.push(newInstance);
+                    }
                     found = true;
                     break;
                 }
@@ -78,12 +95,12 @@ export class TedTestCase{
         return this.interface.definitions.concepts.items.filter((item: { name: string; }) => item.name === concept)[0].children;
     }
 
-    private _generateInstance(concept: string): any{
+    private _generateInstance(concept: string): Instance{
         let definition = this.interface.definitions.concepts.items.filter((item: { name: string; }) => item.name === concept)[0];
         return {
             id: concept,
             properties: this._listDefinitionProperties(definition),
-            concepts: this._listDefinitionReferencedConcepts(definition),
+            references: this._listDefinitionReferencedConcepts(definition),
             children: []
         };
     }
@@ -100,8 +117,8 @@ export class TedTestCase{
         return properties;
     }
 
-    private _listDefinitionReferencedConcepts(definition: Concept): Array<any> {
-        let referencedConcepts = Array<any>();
+    private _listDefinitionReferencedConcepts(definition: Concept): Array<InstanceReference> {
+        let referencedConcepts = Array<InstanceReference>();
         if (definition.referencedConcepts){
             for (let i = 0; i < definition.referencedConcepts.length; i++) {
                 let referencedConcept = definition.referencedConcepts[i];

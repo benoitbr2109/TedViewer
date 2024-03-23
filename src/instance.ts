@@ -18,4 +18,5 @@ export interface Instance {
     properties: Array<InstanceProperty>;
     references: Array<InstanceReference>;
     children: Array<InstanceChild>;
+    databases?: Array<string>;
 }
