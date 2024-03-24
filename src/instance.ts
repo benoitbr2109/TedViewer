@@ -1,6 +1,6 @@
 export interface InstanceProperty {
     name: string;
-    value: string;
+    value: string | null;
 }
 
 export interface InstanceReference {

@@ -4,14 +4,15 @@ This extension add webview for dataset file which are created by Ted application
 
 ## Features
 
-Rendering of .dataset file
+Rendering of ted .dataset file
 
 ### Display
 
 #### Instances
 
 * Display instances in dataset (skipping empty properties)
-* Enable properties edition
+* Properties edition
+* Add instances
 
 #### Defintions
 
@@ -27,4 +28,8 @@ Rendering of .dataset file
 
 ## Todo
 
-* [ ] Add/Remove instances
+* [x] Add instances
+* [ ] Remove instances
+* [ ] Rename instances
+* [ ] Add mandatory attributes on definition properties
+* [ ] Local definitions

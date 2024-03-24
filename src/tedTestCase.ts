@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { Instance, InstanceChild, InstanceProperty, InstanceReference } from './instance';
 import { Concept, ConceptBusinessMapping, ConceptProperty, ConceptReference, ConceptTechnicalMapping } from './concept';
 
@@ -19,6 +20,11 @@ export interface TedTestCaseInterface {
     nssos: Array<string>;
     companyIds: Array<string>;
     definitions: TedDefinition;
+}
+
+export interface UpdatedTedItems {
+  tedItems: Array<TedItem>;
+  isUpdated: boolean;
 }
 
 export class TedTestCase{
@@ -48,87 +54,171 @@ export class TedTestCase{
         return htmlBody;
     }
 
-    public addConceptToInstance(concept: string, instanceId: string): Array<TedItem> {
-        return this._addConceptToInstance(this.interface.items, concept, instanceId);
+    public async addConceptToInstance(concept: string, instanceId: string): Promise<boolean> {
+        return await this._addConceptToInstance(this.interface.items, concept, instanceId);
     }
 
-    private _addConceptToInstance(instances: Array<TedItem>, concept: string, instanceId: string): Array<TedItem> {
-        let found = false;
-        for (let i = 0; i < instances.length; i++) {
-            let item = instances[i];
-            for (let j = 0; j < item.instances.length; j++) {
-                let instance = item.instances[j];
-                if (instance.id === instanceId) {
-                    let newInstance = this._generateInstance(concept);
-                    let existingChildConcept = [];//instance.children.filter((child: InstanceChild) => child.concept === concept);
-                    for (let k = 0; k < instance.children.length; k++) {
-                        let child = instance.children[k];
-                        if (child.concept === concept) {
-                          existingChildConcept.push(child);
-                        }
-                    }
-                    if (existingChildConcept.length === 0) {
-                        let instanceChild: InstanceChild = {
-                            concept: concept,
-                            instances: [newInstance]
-                        };
-                        instance.children.push(instanceChild);
-                    }
-                    else{
-                      existingChildConcept[0].instances.push(newInstance);
-                    }
-                    found = true;
-                    break;
+    public updateTedItem(updatedData: any, itemToUpdate?: TedTestCaseInterface): boolean {
+      let isUpdated = false;
+      let toTreat = itemToUpdate === undefined? this.interface : itemToUpdate;
+      for (let k = 0; k < toTreat.items.length; k++) {
+        let item = toTreat.items[k];
+        for (let i = 0; i < item.instances.length; i++) {
+          let instance = item.instances[i];
+          if (instance.id === updatedData.instance) {
+            for (let j = 0; j < instance.properties.length; j++) {
+              if (instance.properties[j].name === updatedData.name) {
+                if(updatedData.value === ''){
+                  instance.properties[j].value = null;
                 }
-                else {
-                    this._addConceptToInstance(instance.children, concept, instanceId);
+                else{
+                  instance.properties[j].value = updatedData.value;
+                  isUpdated = true;
                 }
-            }
-            if (found) {
                 break;
+                }
+              }
+            break;
+          }
+          for (let j = 0; j < instance.children.length; j++) {
+            let child = instance.children[j];
+            const items: TedTestCaseInterface = {
+              items : [child],
+              companyIds: [],
+              nssos: [],
+              definitions: {concepts: {items:[]}}
+            };
+            let results = this.updateTedItem(updatedData, items);
+            if (results) {
+              isUpdated = true;
+              break;
+            }
+          }
+        }
+        if (isUpdated === true) {
+          this.interface.items[k] = item;
+        }
+      }
+      return isUpdated;
+    }
+
+    private async _addConceptToInstance(instances: Array<TedItem>, concept: string, instanceId: string, hierarchy?: Map<string, string>): Promise<boolean> {
+      let isUpdated = false;
+      for (let i = 0; i < instances.length; i++) {
+        let item = instances[i];
+        for (let j = 0; j < item.instances.length; j++) {
+            let instance = item.instances[j];
+            if(hierarchy === undefined) {
+              hierarchy = new Map<string, string>();
+            }
+            hierarchy.set(item.concept, instance.id);
+            if (instance.id === instanceId) {
+                const inputBox = vscode.window.showInputBox({
+                  ignoreFocusOut: true,
+                  prompt: 'Instance name',
+                  title: concept,
+                  placeHolder: concept
+                });
+                let instanceId = await inputBox;
+                
+                if (instanceId === undefined || instanceId === null || instanceId === '') {
+                  return false;
+                }
+                hierarchy.set(concept, instanceId);
+                let newInstance = this._generateInstance(instanceId, concept, hierarchy);
+                if(newInstance === undefined) {
+                  return false;
+                }
+                let existingChildConcept = instance.children.filter((child: InstanceChild) => child.concept === concept);
+                if (existingChildConcept.length === 0) {
+                    let instanceChild: InstanceChild = {
+                        concept: concept,
+                        instances: [newInstance]
+                    };
+                    instance.children.push(instanceChild);
+                }
+                else{
+                  existingChildConcept[0].instances.push(newInstance);
+                }
+                return true;
+            }
+            else {
+              isUpdated = await this._addConceptToInstance(instance.children, concept, instanceId, hierarchy);
             }
         }
-        return instances;
+      }
+      return isUpdated;
     }
 
     private _getAuthorizedChilren(concept: string): Array<string> | undefined {
         return this.interface.definitions.concepts.items.filter((item: { name: string; }) => item.name === concept)[0].children;
     }
 
-    private _generateInstance(concept: string): Instance{
+    private _generateInstance(instanceId: string, concept: string, hierarchy: Map<string, string>): Instance | undefined{
         let definition = this.interface.definitions.concepts.items.filter((item: { name: string; }) => item.name === concept)[0];
-        return {
-            id: concept,
-            properties: this._listDefinitionProperties(definition),
-            references: this._listDefinitionReferencedConcepts(definition),
+        if (definition === undefined) {
+          vscode.window.showErrorMessage(`Concept ${concept} not in existing definitions`);
+        }
+        try{
+          return {
+            id: instanceId,
+            properties: this._buildPropertiesForDefinition(definition),
+            references: this._buildReferencedConceptsFromDefinitionAndHierarchy(definition, hierarchy),
+            databases: this._listDistinctDefinitionDatabases(definition),
             children: []
         };
+        }
+        catch(e){
+          if(e instanceof Error){
+            vscode.window.showErrorMessage(e.message);
+          }
+          else{
+            vscode.window.showErrorMessage('Unknown error');
+          }
+        }
     }
 
-    private _listDefinitionProperties(definition: Concept): Array<any> {
-        let properties = Array<any>();
+    private _buildPropertiesForDefinition(definition: Concept): Array<InstanceProperty> {
+        let properties = Array<InstanceProperty>();
         for (let i = 0; i < definition.properties.length; i++) {
             let property = definition.properties[i];
             properties.push({
                 name: property.name,
-                value: 'null'
+                value: null
             });
         }
         return properties;
     }
 
-    private _listDefinitionReferencedConcepts(definition: Concept): Array<InstanceReference> {
+    private _buildReferencedConceptsFromDefinitionAndHierarchy(definition: Concept, hierarchy: Map<string, string>): Array<InstanceReference> {
         let referencedConcepts = Array<InstanceReference>();
         if (definition.referencedConcepts){
             for (let i = 0; i < definition.referencedConcepts.length; i++) {
                 let referencedConcept = definition.referencedConcepts[i];
-                referencedConcepts.push({
-                    referenceName: referencedConcept.referenceName,
-                    instanceId: 'null'
-                });
+                let instanceId = hierarchy.get(referencedConcept.referenceName);
+                if (instanceId === undefined) {
+                  throw new Error(`Referenced concept ${referencedConcept.referenceName} not in hierarchy`);
+                }
+                else{
+                  referencedConcepts.push({
+                      'referenceName': referencedConcept.referenceName,
+                      'instanceId': instanceId
+                  });
+                }
             }
         }
         return referencedConcepts;
+    }
+
+    private _listDistinctDefinitionDatabases(definition: Concept): Array<string>{
+      let databases = Array<string>();
+      for (let i = 0; i < definition.tables.length; i++) {
+        let table = definition.tables[i];
+        if (databases.indexOf(table.db) === -1) {
+          databases.push(table.db);
+        }
+      }
+      return databases;
     }
 
     private _instancesToHtml(instances: Array<TedItem>, showAll: boolean = false): string {

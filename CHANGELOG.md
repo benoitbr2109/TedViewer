@@ -25,3 +25,9 @@ All notable changes to the "tedviewer" extension will be documented in this file
 ### Changed
 
 - Support instances edition
+
+## 1.3.0 - 2024-03-24
+
+### Changed
+
+- Support add instances

@@ -1,20 +1,26 @@
 import * as vscode from 'vscode';
 import { TedItem, TedTestCase, TedTestCaseInterface } from './tedTestCase';
+import { WebviewPanelOptions } from 'vscode';
 
 export class TedRenderProvider implements vscode.CustomTextEditorProvider {
 
   public static register(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = new TedRenderProvider(context);
-    const providerRegistration = vscode.window.registerCustomEditorProvider(TedRenderProvider.viewType, provider);
+    const webviewOptions: WebviewPanelOptions = {
+      retainContextWhenHidden: true
+    };
+    const providerRegistration = vscode.window.registerCustomEditorProvider(TedRenderProvider.viewType, provider, {webviewOptions});
     return providerRegistration;
   }
 
   private static readonly viewType = 'tedviewer.render';
   tedTestCase!: TedTestCase;
+  showAll: boolean;
 
   constructor(
     private readonly context: vscode.ExtensionContext
   ) { 
+    this.showAll = false;
   }
 
   public async resolveCustomTextEditor(
@@ -28,25 +34,49 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
     };
     const fileName = document.fileName.replace(/^.*[\\/]/, '');
     this.tedTestCase = TedTestCase.fromJson(document.getText());
-    webviewPanel.webview.html = this.getWebviewContent(this.tedTestCase.interface, fileName);
+    webviewPanel.webview.html = this.getWebviewContent(fileName);
 
-    webviewPanel.webview.onDidReceiveMessage(e => {
+    webviewPanel.webview.onDidReceiveMessage(async e => {
       switch (e.command) {
         case 'showAll':
-          webviewPanel.webview.html = this.getWebviewContent(this.tedTestCase.interface, fileName, e.content);
+          this.showAll = !this.showAll;
+          webviewPanel.webview.html = this.getWebviewContent(fileName);
+          return;
         case 'edit':
           var updatedData = JSON.parse(e.content);
-          var results = this.updateJsonDocument(this.tedTestCase.interface, updatedData);
-          this.updateTextDocument(document, results[0]);
+          var isUpdated = this.tedTestCase.updateTedItem(updatedData);
+          if(isUpdated){
+            this.updateTextDocument(document, this.tedTestCase.interface);
+          }
+          return;
         case 'addItem':
           let addedItem = JSON.parse(e.content);
-          var results = this.tedTestCase.addConceptToInstance(addedItem.addedconcept, addedItem.instanceId);
+          let isAdded = await this.tedTestCase.addConceptToInstance(addedItem.addedconcept, addedItem.instanceId);
+          if (isAdded){
+            this.updateTextDocument(document, this.tedTestCase.interface);
+            webviewPanel.webview.html = this.getWebviewContent(fileName);
+          }
+          return;
       }
+    });
+
+    vscode.workspace.onDidChangeTextDocument(e => {
+      this.tedTestCase = TedTestCase.fromJson(document.getText());
+      webviewPanel.webview.html = this.getWebviewContent(fileName);
     });
 
   }
 
-  private updateJsonDocument(jsonData: any, updatedData: any): Array<TedItem> {
+  private _isShowAllChecked(): string{
+    if(this.showAll){
+      return 'checked'
+    }
+    else{
+      return ''
+    }
+  }
+
+  private updateJsonDocument(jsonData: TedTestCaseInterface, updatedData: any): any {
     let isUpdated = false;
     for (let k = 0; k < jsonData.items.length; k++) {
       let item = jsonData.items[k];
@@ -55,8 +85,13 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
         if (instance.id === updatedData.instance) {
           for (let j = 0; j < instance.properties.length; j++) {
             if (instance.properties[j].name === updatedData.name) {
-              instance.properties[j].value = updatedData.value;
-              isUpdated = true;
+              if(updatedData.value === ''){
+                instance.properties[j].value = null;
+              }
+              else{
+                instance.properties[j].value = updatedData.value;
+                isUpdated = true;
+              }
               break;
               }
             }
@@ -64,7 +99,12 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
         }
         for (let j = 0; j < instance.children.length; j++) {
           let child = instance.children[j];
-          const items = {'items' : [child]};
+          const items: TedTestCaseInterface = {
+            items : [child],
+            companyIds: [],
+            nssos: [],
+            definitions: {concepts: {items:[]}}
+          };
           let results = this.updateJsonDocument(items, updatedData);
           if (results[1]) {
             isUpdated = true;
@@ -93,7 +133,7 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
 	}
 
 
-  private getWebviewContent(jsonData: any = {}, fileName: string = '', showAll: boolean = false): string {
+  private getWebviewContent(fileName: string = ''): string {
     return `<!DOCTYPE html>
       <html lang="en">
       <head>
@@ -148,13 +188,13 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
                     <div class="row justify-content-end">
                       <div class="col-auto">
                         <div class="form-check form-switch">
-                          <input id="showAll" class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault" onclick="showAllToggle()" ${this.toogleToHtml(showAll)}/>
+                          <input id="showAll" class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault" onclick="showAllToggle()" ${this._isShowAllChecked()}/>
                           <label class="form-check-label" for="flexSwitchCheckDefault">Show all attributes</label>
                         </div>
                       </div>
                     </div>
 
-                    ${this.tedTestCase.instancesToHtml(showAll)}
+                    ${this.tedTestCase.instancesToHtml(this.showAll)}
                   </div>
                 </div>
       
@@ -190,12 +230,23 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
             var properties = document.getElementsByClassName("_property_value_");
             
             Array.prototype.forEach.call(properties, function(el) {
-              el.addEventListener("input", function() {
+              el.addEventListener("focusout", function() {
                 const dataMap = {
                   'instance': el.attributes['data-instance'].value,  
                   'name': el.attributes['name'].value, 
                   'value': el.textContent};
                 vscode.postMessage({command:'edit',content: JSON.stringify(dataMap)});
+              }, false);
+
+              el.addEventListener("keypress", function(event) {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  const dataMap = {
+                    'instance': el.attributes['data-instance'].value,  
+                    'name': el.attributes['name'].value, 
+                    'value': el.textContent};
+                  vscode.postMessage({command:'edit',content: JSON.stringify(dataMap)});
+                }
               }, false);
             });
 
@@ -203,10 +254,6 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
       
         </body>
       </html>`;
-  }
-
-  private toogleToHtml(showAll: boolean): string {
-    return showAll ? 'checked' : '';
   }
 }
 
