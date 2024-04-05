@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { TedItem, TedTestCase, TedTestCaseInterface } from './tedTestCase';
-import { WebviewPanelOptions } from 'vscode';
+import { TedTestCase, TedTestCaseInterface } from './tedTestCase';
+import { Webview, WebviewPanelOptions, WebviewPanel } from 'vscode';
+import { TedItem } from './instance';
 
 export class TedRenderProvider implements vscode.CustomTextEditorProvider {
 
@@ -33,7 +34,16 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
       enableScripts: true,
     };
     const fileName = document.fileName.replace(/^.*[\\/]/, '');
-    this.tedTestCase = TedTestCase.fromJson(document.getText());
+    const workbenchConfig = vscode.workspace.getConfiguration('tedViewer');
+    let definitionPath = workbenchConfig.get('definitionLocation');
+    let definition = undefined;
+    if (typeof(definitionPath) === 'string' && definitionPath != ''){
+      const vsPath = vscode.Uri.file(definitionPath);
+      let defintitionDoc = await vscode.workspace.openTextDocument(vsPath);
+      definition = defintitionDoc.getText();
+    }
+
+    this.tedTestCase = TedTestCase.fromJson(document.getText(), definition);
     webviewPanel.webview.html = this.getWebviewContent(fileName);
 
     webviewPanel.webview.onDidReceiveMessage(async e => {
@@ -42,18 +52,17 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
           this.showAll = !this.showAll;
           webviewPanel.webview.html = this.getWebviewContent(fileName);
           return;
-        case 'edit':
-          var updatedData = JSON.parse(e.content);
-          var isUpdated = this.tedTestCase.updateTedItem(updatedData);
-          if(isUpdated){
-            this.updateTextDocument(document, this.tedTestCase.interface);
-          }
+        case 'editItem':
+          var updatedData: TedItem = JSON.parse(e.content);
+          this.tedTestCase.updateSingleTedItemInstance(updatedData);
+          this.updateTextDocument(document);
+          webviewPanel.webview.html = this.getWebviewContent(fileName);
           return;
         case 'addItem':
           let addedItem = JSON.parse(e.content);
           let isAdded = await this.tedTestCase.addConceptToInstance(addedItem.addedconcept, addedItem.instanceId);
           if (isAdded){
-            this.updateTextDocument(document, this.tedTestCase.interface);
+            this.updateTextDocument(document);
             webviewPanel.webview.html = this.getWebviewContent(fileName);
           }
           return;
@@ -67,59 +76,7 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
 
   }
 
-  private _isShowAllChecked(): string{
-    if(this.showAll){
-      return 'checked'
-    }
-    else{
-      return ''
-    }
-  }
-
-  private updateJsonDocument(jsonData: TedTestCaseInterface, updatedData: any): any {
-    let isUpdated = false;
-    for (let k = 0; k < jsonData.items.length; k++) {
-      let item = jsonData.items[k];
-      for (let i = 0; i < item.instances.length; i++) {
-        let instance = item.instances[i];
-        if (instance.id === updatedData.instance) {
-          for (let j = 0; j < instance.properties.length; j++) {
-            if (instance.properties[j].name === updatedData.name) {
-              if(updatedData.value === ''){
-                instance.properties[j].value = null;
-              }
-              else{
-                instance.properties[j].value = updatedData.value;
-                isUpdated = true;
-              }
-              break;
-              }
-            }
-          break;
-        }
-        for (let j = 0; j < instance.children.length; j++) {
-          let child = instance.children[j];
-          const items: TedTestCaseInterface = {
-            items : [child],
-            companyIds: [],
-            nssos: [],
-            definitions: {concepts: {items:[]}}
-          };
-          let results = this.updateJsonDocument(items, updatedData);
-          if (results[1]) {
-            isUpdated = true;
-            break;
-          }
-        }
-      }
-      if (isUpdated === true) {
-        jsonData.items[k] = item;
-      }
-    }
-    return [jsonData, isUpdated];
-  }
-
-  private updateTextDocument(document: vscode.TextDocument, json: any) {
+  private updateTextDocument(document: vscode.TextDocument) {
 		const edit = new vscode.WorkspaceEdit();
 
 		// Just replace the entire document every time for this example extension.
@@ -127,11 +84,11 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
 		edit.replace(
 			document.uri,
 			new vscode.Range(0, 0, document.lineCount, 0),
-			JSON.stringify(json, null, 2));
+			JSON.stringify(this.tedTestCase.interface, null, 2));
 
 		return vscode.workspace.applyEdit(edit);
 	}
-
+  
 
   private getWebviewContent(fileName: string = ''): string {
     return `<!DOCTYPE html>
@@ -161,9 +118,9 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
         <body>
           <div class="container-fluid">
             <header>
-                <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <nav class="navbar navbar-expand-lg shadow-none">
                     <div class="container-fluid">
-                        <a class="navbar-brand" href="#">${fileName}</a>
+                        <p class="navbar-brand" href="#">${fileName}</p>
                         <nav class="nav nav-masthead justify-content-center">
                             <ul class="navbar-nav bd-navbar-nav flex-row">
                                 <li class="nav-item">
@@ -178,32 +135,17 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
                 </nav>
             </header>
             <main>
+
               <div id="accordion" class="pt-3">
                 <div class="collapse show" id="collapseInstance" data-parent="#accordion">
-                  <div class="container-fluid">
-                    <section class="jumbotron text-center bg-light">
-                      <h1 class="jumbotron-heading">Instances</h1>
-                    </section>
-                                    
-                    <div class="row justify-content-end">
-                      <div class="col-auto">
-                        <div class="form-check form-switch">
-                          <input id="showAll" class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault" onclick="showAllToggle()" ${this._isShowAllChecked()}/>
-                          <label class="form-check-label" for="flexSwitchCheckDefault">Show all attributes</label>
-                        </div>
-                      </div>
-                    </div>
-
-                    ${this.tedTestCase.instancesToHtml(this.showAll)}
+                  <div class="container-fluid">      
+                    ${this.tedTestCase.instances.toHtml(this.tedTestCase.definitions, this.showAll)}
                   </div>
                 </div>
       
                 <div class="collapse" id="collapseDefinition" data-parent="#accordion">
                   <div class="container-fluid">
-                    <section class="jumbotron text-center bg-light">
-                      <h1 class="jumbotron-heading">Definitions</h1>
-                    </section>
-                      ${this.tedTestCase.definitionsToHtml()}
+                      ${this.tedTestCase.globalDefinition.toHtml()}
                   </div>
                 </div>
       
@@ -213,11 +155,6 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
       
           <script>
             const vscode = acquireVsCodeApi();
-            function showAllToggle(){
-              const input = document.getElementById("showAll");
-              let text_ = input.checked;
-              vscode.postMessage({command: 'showAll',content: text_});
-            }
 
             function addItem(instanceId, addedconcept){
                 const dataMap = {
@@ -227,28 +164,44 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
                 vscode.postMessage({command: 'addItem',content: JSON.stringify(dataMap)});
             }
 
-            var properties = document.getElementsByClassName("_property_value_");
-            
-            Array.prototype.forEach.call(properties, function(el) {
-              el.addEventListener("focusout", function() {
-                const dataMap = {
-                  'instance': el.attributes['data-instance'].value,  
-                  'name': el.attributes['name'].value, 
-                  'value': el.textContent};
-                vscode.postMessage({command:'edit',content: JSON.stringify(dataMap)});
-              }, false);
+            function editConfirm(modalId){
+              const input = document.getElementById(modalId);
+              var instance = modalId.getElementsByClassName("_instance_")[0];
+              var groups = modalId.getElementsByClassName("form-group row");
+              var properties = [];
+              var references = [];
+              var instanceId = instance.attributes['id'].value
+              var concept = instance.attributes['data-concept'].value
+              for (var i = 0; i < groups.length; i++) {
+                var group = groups[i];
+                var inputGroup = group.getElementsByTagName("input")[0];
 
-              el.addEventListener("keypress", function(event) {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  const dataMap = {
-                    'instance': el.attributes['data-instance'].value,  
-                    'name': el.attributes['name'].value, 
-                    'value': el.textContent};
-                  vscode.postMessage({command:'edit',content: JSON.stringify(dataMap)});
+                var propertyType = inputGroup.attributes['data-type'].value;
+                var property = {};
+
+                if (propertyType == "property") {
+                  property['name'] = inputGroup.attributes['name'].value;
+                  property['value'] = inputGroup.value == ""? null : inputGroup.value;
+                  properties.push(property);
                 }
-              }, false);
-            });
+                else if (propertyType == "reference") {
+                  property['referenceName'] = inputGroup.attributes['name'].value;
+                  property['instanceId'] = inputGroup.value == ""? null : inputGroup.value;
+                  references.push(property);
+                }
+              }
+
+              var tedInstance = {
+                'id': instanceId,
+                'properties': properties,
+                'references': references};
+              var tedItem = {
+                'concept': concept,
+                'instances': [tedInstance]
+              };
+              vscode.postMessage({command: 'editItem',content: JSON.stringify(tedItem)});
+            }
+
 
           </script>
       

@@ -27,7 +27,16 @@
                     }
                 ]
             }
-        ]
+        ],
+        "configuration":{
+            "title": "TedViewer",
+            "properties": {
+                "tedViewer.definitionLocation": {
+                    "type": "string",
+                    "description": "The location of the Ted application definition file."
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
