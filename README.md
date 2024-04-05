@@ -32,4 +32,4 @@ Rendering of ted .dataset file
 * [ ] Remove instances
 * [ ] Rename instances
 * [ ] Add mandatory attributes on definition properties
-* [ ] Local definitions
+* [x] Local definitions
