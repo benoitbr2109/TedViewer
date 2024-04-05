@@ -30,7 +30,7 @@ All notable changes to the "tedviewer" extension will be documented in this file
 
 ### Changed
 
-- Support add instances
+- Support add instance
 
 ## 2.0.0 - 2024-04-05
 
@@ -38,3 +38,10 @@ All notable changes to the "tedviewer" extension will be documented in this file
 
 - New update system with modal window
 - Add definition local file
+
+## 2.1.0 - 2024-04-05
+
+### Changed
+
+- Support delete instance
+- Collapse all button

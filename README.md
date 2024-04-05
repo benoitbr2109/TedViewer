@@ -12,7 +12,8 @@ Rendering of ted .dataset file
 
 * Display instances in dataset (skipping empty properties)
 * Properties edition
-* Add instances
+* Add instance
+* Delete instance
 
 #### Defintions
 
@@ -29,7 +30,7 @@ Rendering of ted .dataset file
 ## Todo
 
 * [x] Add instances
-* [ ] Remove instances
+* [x] Remove instances
 * [ ] Rename instances
 * [ ] Add mandatory attributes on definition properties
 * [x] Local definitions

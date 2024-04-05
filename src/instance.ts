@@ -33,8 +33,8 @@ export class Instances {
         this.globalDefinition = globalDefinition;
     }
 
-    public toHtml(definitions: Definitions, showAll: boolean = false): string {
-        return this.instancesToHtml(this.items, definitions, showAll);
+    public toHtml(definitions: Definitions, collapseAll: boolean = false): string {
+        return this.instancesToHtml(this.items, definitions, collapseAll);
     }
 
     public generateInstance(instanceId: string, concept: string, hierarchy: Map<string, string>): Instance | undefined {
@@ -87,7 +87,7 @@ export class Instances {
         }
     }
 
-    private instancesToHtml(instances: Array<TedItem>, definitions: Definitions, showAll: boolean = false): string {
+    private instancesToHtml(instances: Array<TedItem>, definitions: Definitions, collapseAll: boolean = false): string {
         let htmlBody = "";
         for (let i = 0; i < instances.length; i++) {
             let item = instances[i];
@@ -95,17 +95,17 @@ export class Instances {
                 let instance = item.instances[j];
                 let conceptDefinition = this.globalDefinition.getConceptDefintion(item.concept);
                 if (conceptDefinition === undefined) {
-                    htmlBody += this.instanceToHtml(item.concept, undefined, instance, definitions, showAll);
+                    htmlBody += this.instanceToHtml(item.concept, undefined, instance, definitions, collapseAll);
                 }
                 else {
-                    htmlBody += this.instanceToHtml(item.concept, conceptDefinition.children, instance, definitions, showAll);
+                    htmlBody += this.instanceToHtml(item.concept, conceptDefinition.children, instance, definitions, collapseAll);
                 }
             }
         }
         return htmlBody;
     }
 
-    private instanceToHtml(conceptName: string, authorizedChildren: string[] | undefined, instance: Instance, definitions: Definitions, showAll: boolean = false): string {
+    private instanceToHtml(conceptName: string, authorizedChildren: string[] | undefined, instance: Instance, definitions: Definitions, collapseAll: boolean = false): string {
         let htmlBody = `
         <div id="accordion${instance.id}" class="accordion">
         <div class="card shadow-none border rounded-0">
@@ -115,7 +115,7 @@ export class Instances {
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col">
-                                    <a class="accordion-button bg-primary" style="--mdb-bg-opacity: 0.2;" data-toggle="collapse" data-target="#collapse${instance.id}" aria-expanded="true" aria-controls="collapse${instance.id}">
+                                    <a class="accordion-button bg-primary ${collapseAll === true ? "collapsed" : ""}" style="--mdb-bg-opacity: 0.2;" data-toggle="collapse" data-target="#collapse${instance.id}" aria-expanded="${!collapseAll}" aria-controls="collapse${instance.id}">
                                         ${instance.id}
                                     </a>
                                 </div>
@@ -130,7 +130,9 @@ export class Instances {
                                         </svg>
                                     </a>
                                     <div class="dropdown-menu" aria-labelledby="addIn${instance.id}">
-                                    <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editInstance${instance.id}">Edit</a>
+                                    <a class="dropdown-item bg-primary" style="--mdb-bg-opacity: 0.4;" data-bs-toggle="modal" data-bs-target="#editInstance${instance.id}">Edit</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item bg-danger" style="--mdb-bg-opacity: 0.4;" type="button" data-bs-toggle="modal" data-bs-target="#deleteInstance${instance.id}">Delete</a>
                                     <div class="dropdown-divider"></div>
                                     `;
         if (authorizedChildren) {
@@ -162,6 +164,32 @@ export class Instances {
                                         </div>
                                     </div>
 
+                                    <div class="modal fade" id="deleteInstance${instance.id}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="staticBackdropLabel">${instance.id}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+
+                                                <div class="modal-body" id="deleteModal${instance.id}">
+                                                    <div class="card-body">
+                                                        <div id="${instance.id}" data-concept="${conceptName}" class="_instance_">
+                                                            <div class="container-fluid">
+                                                                <p>Confirm delete?</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    <button type="button" class="btn btn-danger" onclick="deleteConfirm(deleteModal${instance.id})">Confirm</button>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+
 
                                 </div>
                             </div>
@@ -170,9 +198,9 @@ export class Instances {
                 </div>
             </div>
     
-            <div id="collapse${instance.id}" class="accordion-collapse collapse show" aria-labelledby="heading${instance.id}" data-parent="#accordion${instance.id}">
+            <div id="collapse${instance.id}" class="accordion-collapse collapse ${collapseAll === false ? "show" : ""}" aria-labelledby="heading${instance.id}" data-parent="#accordion${instance.id}">
                 
-            ${this.generateCardInstance(instance, conceptName, definitions)}
+            ${this.generateCardInstance(instance, conceptName, definitions, true, false, collapseAll)}
 
             </div>
             </div>
@@ -181,14 +209,14 @@ export class Instances {
         return htmlBody;
     }
 
-    private generateCardInstance(instance: Instance, conceptName: string, definitions: Definitions, withChildren: Boolean = true, showAll: boolean = false): string {
+    private generateCardInstance(instance: Instance, conceptName: string, definitions: Definitions, withChildren: Boolean = true, editMode: boolean = false, collapseAll: boolean = false): string {
         return `
         <div class="card-body">
             <div id="${instance.id}" data-concept="${conceptName}" class="_instance_">
-                ${Instances.propertiesToHtml(instance.id, instance.properties, showAll)}
+                ${Instances.propertiesToHtml(instance.id, instance.properties, editMode)}
                 <hr class="hr" />
-                ${Instances.instanceReferenceToHtml(instance.id, conceptName, instance.references, definitions, showAll)}
-                ${withChildren ? this.instancesToHtml(instance.children, definitions, showAll) : ''}
+                ${Instances.instanceReferenceToHtml(instance.id, conceptName, instance.references, definitions, editMode)}
+                ${withChildren ? this.instancesToHtml(instance.children, definitions, collapseAll) : ''}
             </div>
         </div>
         `
@@ -219,17 +247,17 @@ export class Instances {
         return htmlBody;
     }
 
-    private static propertiesToHtml(instanceName: String, properties: Array<InstanceProperty>, showAll: boolean = false): string {
+    private static propertiesToHtml(instanceName: String, properties: Array<InstanceProperty>, editMode: boolean = false): string {
         let htmlBody = `<div class="container-fluid">`;
         for (let i = 0; i < properties.length; i++) {
             let property = properties[i];
             let value = property.value !== null ? property.value : '';
-            if (property.value !== null || showAll === true) {
+            if (property.value !== null || editMode === true) {
                 htmlBody += `
                 <div class="form-group row">
                     <label class="col-sm-6 col-form-label">${property.name}</label>
                     <div class="col-sm-6">
-                        <input data-instance="${instanceName}" data-type="property" type="text" class="input-sm form-control${showAll ? '' : '-plaintext'}" name="${property.name}" value="${value}" ${showAll ? '' : 'readonly'}/>
+                        <input data-instance="${instanceName}" data-type="property" type="text" class="input-sm form-control${editMode ? '' : '-plaintext'}" name="${property.name}" value="${value}" ${editMode ? '' : 'readonly'}/>
                     </div>
                 </div>`;
             }

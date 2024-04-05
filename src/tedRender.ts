@@ -51,13 +51,13 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
         case 'showAll':
           this.showAll = !this.showAll;
           webviewPanel.webview.html = this.getWebviewContent(fileName);
-          return;
+          break;
         case 'editItem':
           var updatedData: TedItem = JSON.parse(e.content);
           this.tedTestCase.updateSingleTedItemInstance(updatedData);
           this.updateTextDocument(document);
           webviewPanel.webview.html = this.getWebviewContent(fileName);
-          return;
+          break;
         case 'addItem':
           let addedItem = JSON.parse(e.content);
           let isAdded = await this.tedTestCase.addConceptToInstance(addedItem.addedconcept, addedItem.instanceId);
@@ -65,7 +65,13 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
             this.updateTextDocument(document);
             webviewPanel.webview.html = this.getWebviewContent(fileName);
           }
-          return;
+          break;
+        case 'deleteItem':
+          let deleteItem = JSON.parse(e.content);
+          this.tedTestCase.deleteItem(deleteItem);
+          this.updateTextDocument(document);
+          webviewPanel.webview.html = this.getWebviewContent(fileName);
+          break;
       }
     });
 
@@ -136,9 +142,14 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
             </header>
             <main>
 
+
               <div id="accordion" class="pt-3">
                 <div class="collapse show" id="collapseInstance" data-parent="#accordion">
-                  <div class="container-fluid">      
+                  <div class="container-fluid">     
+                  <button type="button" class="btn btn-primary" data-toggle="button" onclick="showAll()">
+                    ${this.showAll === true ? "Show all" : "Collapse all"}
+                  </button> 
+                  <hr class="hr"/>
                     ${this.tedTestCase.instances.toHtml(this.tedTestCase.definitions, this.showAll)}
                   </div>
                 </div>
@@ -156,6 +167,10 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
           <script>
             const vscode = acquireVsCodeApi();
 
+            function showAll(){
+              vscode.postMessage({command: 'showAll'});
+            }
+
             function addItem(instanceId, addedconcept){
                 const dataMap = {
                     'instanceId': instanceId,  
@@ -170,8 +185,8 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
               var groups = modalId.getElementsByClassName("form-group row");
               var properties = [];
               var references = [];
-              var instanceId = instance.attributes['id'].value
-              var concept = instance.attributes['data-concept'].value
+              var instanceId = instance.attributes['id'].value;
+              var concept = instance.attributes['data-concept'].value;
               for (var i = 0; i < groups.length; i++) {
                 var group = groups[i];
                 var inputGroup = group.getElementsByTagName("input")[0];
@@ -200,6 +215,21 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
                 'instances': [tedInstance]
               };
               vscode.postMessage({command: 'editItem',content: JSON.stringify(tedItem)});
+            }
+
+            function deleteConfirm(modalId){
+              const input = document.getElementById(modalId);
+              var instance = modalId.getElementsByClassName("_instance_")[0];
+              var instanceId = instance.attributes['id'].value;
+              var concept = instance.attributes['data-concept'].value;
+              var tedInstance = {
+                'id': instanceId
+              };
+              var tedItem = {
+                'concept': concept,
+                'instances': [tedInstance]
+              };
+              vscode.postMessage({command: 'deleteItem',content: JSON.stringify(tedItem)});
             }
 
 

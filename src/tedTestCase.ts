@@ -46,6 +46,17 @@ export class TedTestCase {
     }
   }
 
+  public deleteItem(tedItem: TedItem){
+    let currentTedItem = this.instances.findTedItemByConcept(tedItem.concept);
+    if (currentTedItem!== undefined) {
+      let currentInstance = currentTedItem.instances.filter((item: Instance) => item.id === tedItem.instances[0].id)[0];
+      const index = currentTedItem.instances.indexOf(currentInstance);
+      if (index > -1) {
+        currentTedItem.instances.splice(index, 1);
+     }
+    }
+  }
+
 
   private async _addConceptToInstance(instances: Array<TedItem>, concept: string, instanceId: string, hierarchy?: Map<string, string>): Promise<boolean> {
     let isUpdated = false;
