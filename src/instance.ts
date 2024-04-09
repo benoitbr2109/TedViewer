@@ -4,7 +4,7 @@ import { Concept, Definitions } from "./definition/definition";
 export interface InstanceProperty {
     name: string;
     value: string | null;
-}
+} 
 
 export interface InstanceReference {
     referenceName: string;
@@ -80,9 +80,16 @@ export class Instances {
         }
         for (let i = 0; i < tedItem.instances.length; ++i) {
             let instance = tedItem.instances[i];
+            let findItem = undefined;
             for (let j = 0; j < instance.children.length; ++j) {
                 let childTedItem = instance.children[j];
-                return Instances.findTedItemByConceptInInstances(childTedItem, searchConcept);
+                findItem = Instances.findTedItemByConceptInInstances(childTedItem, searchConcept);
+                if (findItem !== undefined){
+                    return findItem;
+                }
+            }
+            if (findItem !== undefined){
+                return findItem;
             }
         }
     }
