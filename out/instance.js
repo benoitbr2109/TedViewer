@@ -1,44 +1,43 @@
-import * as vscode from 'vscode';
-import { Concept, Definitions } from "./definition/definition";
-
-export interface InstanceProperty {
-    name: string;
-    value: string | null;
-}
-
-export interface InstanceReference {
-    referenceName: string;
-    instanceId: string | null;
-}
-
-export interface TedItem {
-    concept: string;
-    instances: Array<Instance>;
-}
-
-export interface Instance {
-    id: string;
-    properties: Array<InstanceProperty>;
-    references: Array<InstanceReference>;
-    children: Array<TedItem>;
-    databases?: Array<string>;
-}
-
-export class Instances {
-    items: Array<TedItem>;
-    globalDefinition: Definitions;
-
-    constructor(items: Array<TedItem>, globalDefinition: Definitions) {
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Instances = void 0;
+const vscode = __importStar(require("vscode"));
+const definition_1 = require("./definition/definition");
+class Instances {
+    items;
+    globalDefinition;
+    constructor(items, globalDefinition) {
         this.items = items;
         this.globalDefinition = globalDefinition;
     }
-
-    public toHtml(definitions: Definitions, collapseAll: boolean = false): string {
+    toHtml(definitions, collapseAll = false) {
         return this.instancesToHtml(this.items, definitions, collapseAll);
     }
-
-    public generateInstance(instanceId: string, concept: string, hierarchy: Map<string, string>): Instance | undefined {
-        let conceptDefinition = this.globalDefinition.items.filter((item: { name: string; }) => item.name === concept)[0];
+    generateInstance(instanceId, concept, hierarchy) {
+        let conceptDefinition = this.globalDefinition.items.filter((item) => item.name === concept)[0];
         if (conceptDefinition === undefined) {
             vscode.window.showErrorMessage(`Concept ${concept} not in existing definitions`);
             return;
@@ -48,7 +47,7 @@ export class Instances {
                 id: instanceId,
                 properties: Instances.buildPropertiesForConcept(conceptDefinition),
                 references: Instances.buildReferencedConceptsFromDefinitionAndHierarchy(conceptDefinition, hierarchy),
-                databases: Definitions.listDistinctDefinitionDatabases(conceptDefinition),
+                databases: definition_1.Definitions.listDistinctDefinitionDatabases(conceptDefinition),
                 children: []
             };
         }
@@ -61,8 +60,7 @@ export class Instances {
             }
         }
     }
-
-    public findTedItemByConcept(concept: string): TedItem | undefined {
+    findTedItemByConcept(concept) {
         for (let i = 0; i < this.items.length; i++) {
             let tedItem = this.items[i];
             if (tedItem.concept === concept) {
@@ -73,8 +71,7 @@ export class Instances {
             }
         }
     }
-
-    private static findTedItemByConceptInInstances(tedItem: TedItem, searchConcept: string): TedItem | undefined {
+    static findTedItemByConceptInInstances(tedItem, searchConcept) {
         if (tedItem.concept === searchConcept) {
             return tedItem;
         }
@@ -86,8 +83,7 @@ export class Instances {
             }
         }
     }
-
-    private instancesToHtml(instances: Array<TedItem>, definitions: Definitions, collapseAll: boolean = false): string {
+    instancesToHtml(instances, definitions, collapseAll = false) {
         let htmlBody = "";
         for (let i = 0; i < instances.length; i++) {
             let item = instances[i];
@@ -104,8 +100,7 @@ export class Instances {
         }
         return htmlBody;
     }
-
-    private instanceToHtml(conceptName: string, authorizedChildren: string[] | undefined, instance: Instance, definitions: Definitions, collapseAll: boolean = false): string {
+    instanceToHtml(conceptName, authorizedChildren, instance, definitions, collapseAll = false) {
         let htmlBody = `
         <div id="accordion${instance.id}" class="accordion">
         <div class="card shadow-none border rounded-0">
@@ -208,8 +203,7 @@ export class Instances {
         `;
         return htmlBody;
     }
-
-    private generateCardInstance(instance: Instance, conceptName: string, definitions: Definitions, withChildren: boolean = true, editMode: boolean = false, collapseAll: boolean = false): string {
+    generateCardInstance(instance, conceptName, definitions, withChildren = true, editMode = false, collapseAll = false) {
         let conceptDef = definitions.getConceptDefintion(conceptName);
         return `
         <div class="card-body">
@@ -222,14 +216,13 @@ export class Instances {
         </div>
         `;
     }
-
-    private static instanceReferenceToHtml(instanceName: String, conceptName: String, instanceReference: Array<InstanceReference>, definition: Definitions, showAll: boolean = false): string {
+    static instanceReferenceToHtml(instanceName, conceptName, instanceReference, definition, showAll = false) {
         let htmlBody = `<div class="container-fluid">`;
-        let conceptReferences = definition.items.filter((item: { name: string; }) => item.name === conceptName)[0].referencedConcepts;
+        let conceptReferences = definition.items.filter((item) => item.name === conceptName)[0].referencedConcepts;
         if (conceptReferences !== undefined) {
             for (let i = 0; i < instanceReference.length; i++) {
                 let refConcept = instanceReference[i].referenceName;
-                let conceptReference = conceptReferences.filter((item: { referencedConcept: String; }) => item.referencedConcept === refConcept)[0];
+                let conceptReference = conceptReferences.filter((item) => item.referencedConcept === refConcept)[0];
                 if (conceptReference.useAncestor === false) {
                     let value = instanceReference[i].instanceId !== null ? instanceReference[i].instanceId : '';
                     if (instanceReference[i].instanceId !== null || showAll === true) {
@@ -247,12 +240,11 @@ export class Instances {
         htmlBody += `</div>`;
         return htmlBody;
     }
-
-    private static propertiesToHtml(instanceName: String, properties: Array<InstanceProperty>, concept: Concept, editMode: boolean = false): string {
+    static propertiesToHtml(instanceName, properties, concept, editMode = false) {
         let htmlBody = `<div class="container-fluid">`;
         for (let i = 0; i < properties.length; i++) {
             let property = properties[i];
-            let conceptProperty = concept.properties.filter((item: { name: String; }) => item.name === property.name)[0];
+            let conceptProperty = concept.properties.filter((item) => item.name === property.name)[0];
             let value = property.value !== null ? property.value : '';
             if (property.value !== null || editMode === true) {
                 htmlBody += `
@@ -263,22 +255,20 @@ export class Instances {
 
                         <div class="input-group">
                             <input data-instance="${instanceName}" placeholder="${conceptProperty.generatorProperty === undefined ? '' : conceptProperty.generatorProperty}" data-type="property" type="text" class="input-sm form-control${editMode ? '' : '-plaintext'}" name="${property.name}" value="${value}" ${editMode ? '' : 'readonly'}/>`;
-                            if(editMode){
-                            htmlBody += `<span class="input-group-text bg-light" id="basic-addon1">${conceptProperty.type}</span>`;
-                            }
-                            htmlBody += `
+                if (editMode) {
+                    htmlBody += `<span class="input-group-text bg-light" id="basic-addon1">${conceptProperty.type}</span>`;
+                }
+                htmlBody += `
                         </div>
                     </div>
                 </div>`;
             }
         }
         htmlBody += `</div>`;
-
         return htmlBody;
     }
-
-    private static buildPropertiesForConcept(concept: Concept): Array<InstanceProperty> {
-        let properties = Array<InstanceProperty>();
+    static buildPropertiesForConcept(concept) {
+        let properties = Array();
         for (let i = 0; i < concept.properties.length; i++) {
             let property = concept.properties[i];
             properties.push({
@@ -288,9 +278,8 @@ export class Instances {
         }
         return properties;
     }
-
-    private static buildReferencedConceptsFromDefinitionAndHierarchy(definition: Concept, hierarchy: Map<string, string>): Array<InstanceReference> {
-        let referencedConcepts = Array<InstanceReference>();
+    static buildReferencedConceptsFromDefinitionAndHierarchy(definition, hierarchy) {
+        let referencedConcepts = Array();
         if (definition.referencedConcepts) {
             for (let i = 0; i < definition.referencedConcepts.length; i++) {
                 let referencedConcept = definition.referencedConcepts[i];
@@ -315,6 +304,6 @@ export class Instances {
         }
         return referencedConcepts;
     }
-
-
 }
+exports.Instances = Instances;
+//# sourceMappingURL=instance.js.map
