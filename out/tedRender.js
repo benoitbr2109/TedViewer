@@ -1,103 +1,106 @@
-import * as vscode from 'vscode';
-import { TedTestCase, TedTestCaseInterface } from './tedTestCase';
-import { Webview, WebviewPanelOptions, WebviewPanel } from 'vscode';
-import { TedItem } from './instance';
-
-export class TedRenderProvider implements vscode.CustomTextEditorProvider {
-
-  public static register(context: vscode.ExtensionContext): vscode.Disposable {
-    const provider = new TedRenderProvider(context);
-    const webviewOptions: WebviewPanelOptions = {
-      retainContextWhenHidden: true
-    };
-    const providerRegistration = vscode.window.registerCustomEditorProvider(TedRenderProvider.viewType, provider, {webviewOptions});
-    return providerRegistration;
-  }
-
-  private static readonly viewType = 'tedviewer.render';
-  tedTestCase!: TedTestCase;
-  showAll: boolean;
-
-  constructor(
-    private readonly context: vscode.ExtensionContext
-  ) { 
-    this.showAll = false;
-  }
-
-  public async resolveCustomTextEditor(
-    document: vscode.TextDocument,
-    webviewPanel: vscode.WebviewPanel,
-    _token: vscode.CancellationToken
-  ): Promise<void> {
-    // Setup initial content for the webview
-    webviewPanel.webview.options = {
-      enableScripts: true,
-    };
-    const fileName = document.fileName.replace(/^.*[\\/]/, '');
-    const workbenchConfig = vscode.workspace.getConfiguration('tedViewer');
-    let definitionPath = workbenchConfig.get('definitionLocation');
-    let definition = undefined;
-    if (typeof(definitionPath) === 'string' && definitionPath !== ''){
-      const vsPath = vscode.Uri.file(definitionPath);
-      let defintitionDoc = await vscode.workspace.openTextDocument(vsPath);
-      definition = defintitionDoc.getText();
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
     }
-
-    this.tedTestCase = TedTestCase.fromJson(document.getText(), definition);
-    webviewPanel.webview.html = this.getWebviewContent(fileName);
-
-    webviewPanel.webview.onDidReceiveMessage(async e => {
-      switch (e.command) {
-        case 'showAll':
-          this.showAll = !this.showAll;
-          webviewPanel.webview.html = this.getWebviewContent(fileName);
-          break;
-        case 'editItem':
-          var updatedData: TedItem = JSON.parse(e.content);
-          this.tedTestCase.updateSingleTedItemInstance(updatedData);
-          this.updateTextDocument(document);
-          webviewPanel.webview.html = this.getWebviewContent(fileName);
-          break;
-        case 'addItem':
-          let addedItem = JSON.parse(e.content);
-          let isAdded = await this.tedTestCase.addConceptToInstance(addedItem.addedconcept, addedItem.instanceId);
-          if (isAdded){
-            this.updateTextDocument(document);
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TedRenderProvider = void 0;
+const vscode = __importStar(require("vscode"));
+const tedTestCase_1 = require("./tedTestCase");
+class TedRenderProvider {
+    context;
+    static register(context) {
+        const provider = new TedRenderProvider(context);
+        const webviewOptions = {
+            retainContextWhenHidden: true
+        };
+        const providerRegistration = vscode.window.registerCustomEditorProvider(TedRenderProvider.viewType, provider, { webviewOptions });
+        return providerRegistration;
+    }
+    static viewType = 'tedviewer.render';
+    tedTestCase;
+    showAll;
+    constructor(context) {
+        this.context = context;
+        this.showAll = false;
+    }
+    async resolveCustomTextEditor(document, webviewPanel, _token) {
+        // Setup initial content for the webview
+        webviewPanel.webview.options = {
+            enableScripts: true,
+        };
+        const fileName = document.fileName.replace(/^.*[\\/]/, '');
+        const workbenchConfig = vscode.workspace.getConfiguration('tedViewer');
+        let definitionPath = workbenchConfig.get('definitionLocation');
+        let definition = undefined;
+        if (typeof (definitionPath) === 'string' && definitionPath !== '') {
+            const vsPath = vscode.Uri.file(definitionPath);
+            let defintitionDoc = await vscode.workspace.openTextDocument(vsPath);
+            definition = defintitionDoc.getText();
+        }
+        this.tedTestCase = tedTestCase_1.TedTestCase.fromJson(document.getText(), definition);
+        webviewPanel.webview.html = this.getWebviewContent(fileName);
+        webviewPanel.webview.onDidReceiveMessage(async (e) => {
+            switch (e.command) {
+                case 'showAll':
+                    this.showAll = !this.showAll;
+                    webviewPanel.webview.html = this.getWebviewContent(fileName);
+                    break;
+                case 'editItem':
+                    var updatedData = JSON.parse(e.content);
+                    this.tedTestCase.updateSingleTedItemInstance(updatedData);
+                    this.updateTextDocument(document);
+                    webviewPanel.webview.html = this.getWebviewContent(fileName);
+                    break;
+                case 'addItem':
+                    let addedItem = JSON.parse(e.content);
+                    let isAdded = await this.tedTestCase.addConceptToInstance(addedItem.addedconcept, addedItem.instanceId);
+                    if (isAdded) {
+                        this.updateTextDocument(document);
+                        webviewPanel.webview.html = this.getWebviewContent(fileName);
+                    }
+                    break;
+                case 'deleteItem':
+                    let deleteItem = JSON.parse(e.content);
+                    this.tedTestCase.deleteItem(deleteItem);
+                    this.updateTextDocument(document);
+                    webviewPanel.webview.html = this.getWebviewContent(fileName);
+                    break;
+            }
+        });
+        vscode.workspace.onDidChangeTextDocument(e => {
+            this.tedTestCase = tedTestCase_1.TedTestCase.fromJson(document.getText());
             webviewPanel.webview.html = this.getWebviewContent(fileName);
-          }
-          break;
-        case 'deleteItem':
-          let deleteItem = JSON.parse(e.content);
-          this.tedTestCase.deleteItem(deleteItem);
-          this.updateTextDocument(document);
-          webviewPanel.webview.html = this.getWebviewContent(fileName);
-          break;
-      }
-    });
-
-    vscode.workspace.onDidChangeTextDocument(e => {
-      this.tedTestCase = TedTestCase.fromJson(document.getText());
-      webviewPanel.webview.html = this.getWebviewContent(fileName);
-    });
-
-  }
-
-  private updateTextDocument(document: vscode.TextDocument) {
-		const edit = new vscode.WorkspaceEdit();
-
-		// Just replace the entire document every time for this example extension.
-		// A more complete extension should compute minimal edits instead.
-		edit.replace(
-			document.uri,
-			new vscode.Range(0, 0, document.lineCount, 0),
-			JSON.stringify(this.tedTestCase.interface, null, 2));
-
-		return vscode.workspace.applyEdit(edit);
-	}
-  
-
-  private getWebviewContent(fileName: string = ''): string {
-    return `<!DOCTYPE html>
+        });
+    }
+    updateTextDocument(document) {
+        const edit = new vscode.WorkspaceEdit();
+        // Just replace the entire document every time for this example extension.
+        // A more complete extension should compute minimal edits instead.
+        edit.replace(document.uri, new vscode.Range(0, 0, document.lineCount, 0), JSON.stringify(this.tedTestCase.interface, null, 2));
+        return vscode.workspace.applyEdit(edit);
+    }
+    getWebviewContent(fileName = '') {
+        return `<!DOCTYPE html>
       <html lang="en">
       <head>
           <meta charset="UTF-8"/>
@@ -237,6 +240,7 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
       
         </body>
       </html>`;
-  }
+    }
 }
-
+exports.TedRenderProvider = TedRenderProvider;
+//# sourceMappingURL=tedRender.js.map

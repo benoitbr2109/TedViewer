@@ -38,7 +38,7 @@ export class TedTestCase {
       for(let i=0; i < tedItem.instances[0].references.length; ++i){
         let newReference = tedItem.instances[0].references[i];
         for(let j=0; j < currentInstance.references.length; ++j){
-          if(currentInstance.references[j].referenceName == newReference.referenceName){
+          if(currentInstance.references[j].referenceName === newReference.referenceName){
             currentInstance.references[j].instanceId = newReference.instanceId;
           }
         }
