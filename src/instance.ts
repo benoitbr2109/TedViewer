@@ -115,7 +115,7 @@ export class Instances {
     private instanceToHtml(conceptName: string, authorizedChildren: string[] | undefined, instance: Instance, definitions: Definitions, collapseAll: boolean = false): string {
         let htmlBody = `
         <div id="accordion${instance.id}" class="accordion">
-        <div class="card shadow-none border rounded-0">
+        <div class="card shadow-none border rounded-0" style="min-height: 150px;">
             <div id="heading${instance.id}">
                 <div>
                     <h5 class="mb-0 d-flex justify-content-between align-items-center">
@@ -136,7 +136,7 @@ export class Instances {
                                             <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
                                         </svg>
                                     </a>
-                                    <div class="dropdown-menu" aria-labelledby="addIn${instance.id}">
+                                    <div class="dropdown-menu scrollable-menu" style="position: relative" aria-labelledby="addIn${instance.id}">
                                     <a class="dropdown-item bg-primary" style="--mdb-bg-opacity: 0.4;" data-bs-toggle="modal" data-bs-target="#editInstance${instance.id}">Edit</a>
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item bg-danger" style="--mdb-bg-opacity: 0.4;" type="button" data-bs-toggle="modal" data-bs-target="#deleteInstance${instance.id}">Delete</a>

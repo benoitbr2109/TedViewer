@@ -118,6 +118,14 @@ export class TedRenderProvider implements vscode.CustomTextEditorProvider {
           
           <!-- MDB -->
           <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.1.0/mdb.umd.min.js"></script>
+
+          <style>
+            .scrollable-menu {
+                height: auto;
+                max-height: 150px;
+                overflow: scroll;
+            }
+          </style>
       
       
       </head>
